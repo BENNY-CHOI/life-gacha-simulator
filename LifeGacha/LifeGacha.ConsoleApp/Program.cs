@@ -6,6 +6,9 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.ChatCompletion;
+
 using OpenAI;
 
 var config = new ConfigurationBuilder()
@@ -21,7 +24,7 @@ if (string.IsNullOrWhiteSpace(config["Azure:OpenAI:Endpoint"]!) == false)
         new AzureKeyCredential(config["Azure:OpenAI:ApiKey"]!));
 
     builder.AddAzureOpenAIChatCompletion(
-                deploymentName: config["Azure:OpenAI:DeploymentNames:ChatCompletion"]!,
+                deploymentName: config["Azure:OpenAI:DeploymentName"]!,
                 azureOpenAIClient: client);
 }
 else
@@ -31,15 +34,28 @@ else
         options: new OpenAIClientOptions { Endpoint = new Uri(config["GitHub:Models:Endpoint"]!) });
 
     builder.AddOpenAIChatCompletion(
-                modelId: config["GitHub:Models:ModelIds:ChatCompletion"]!,
+                modelId: config["GitHub:Models:ModelId"]!,
                 openAIClient: client);
 }
 var kernel = builder.Build();
+
+var definition = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "../../..", "Plugins", "LifeGachaAgent", "LifeGacha.yaml"));
+var template = KernelFunctionYaml.ToPromptTemplateConfig(definition);
+
+var agent = new ChatCompletionAgent(template, new KernelPromptTemplateFactory())
+{
+    Kernel = kernel
+};
+
+var history = new ChatHistory();
+history.AddSystemMessage("당신은 유쾌한 운빨 인생 시뮬레이터입니다. 매번 인생의 랜덤한 하루를 재밌는 이야기 형식으로 들려줍니다. 모든 대답은 한국어로 해주세요.");
 
 var input = default(string);
 var message = default(string);
 while (true)
 {
+    Console.WriteLine("오늘 하루 운세를 뽑아볼까요? 아무 단어나 입력해주세요 (종료하려면 엔터):");
+
     Console.Write("User: ");
     input = Console.ReadLine();
 
@@ -50,14 +66,23 @@ while (true)
 
     Console.Write("Assistant: ");
 
-    var response = kernel.InvokePromptStreamingAsync(input);
+    history.AddUserMessage(input);
+    var arguments = new KernelArguments()
+    {
+        { "dayInput", input },
+        { "events", 3 }
+    };
+
+    var response = agent.InvokeStreamingAsync(history, arguments);
+
+    message = "";
     await foreach (var content in response)
     {
         await Task.Delay(20);
         message += content;
         Console.Write(content);
     }
-    Console.WriteLine();
 
-    Console.WriteLine();
+    history.AddAssistantMessage(message!);
+    Console.WriteLine("\n");
 }

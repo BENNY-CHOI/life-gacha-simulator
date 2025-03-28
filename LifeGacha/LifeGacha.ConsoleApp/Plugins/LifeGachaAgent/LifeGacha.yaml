@@ -1,0 +1,19 @@
+name: LifeGacha
+template: |
+  다음 단어를 기반으로 사용자의 랜덤한 하루를 한줄씩 출력해주세요: {{$dayInput}}.
+  {{$events}}가지 중요한 사건이 일어납니다. 각 사건은 이모티콘과 함께 조합하고, 코믹하거나 드라마틱하게 묘사하고, 
+  마지막에는 하루의 운세 총평을 간단히 덧붙여주세요. (총 50자 이내)
+template_format: semantic-kernel
+description: 사용자의 입력을 바탕으로 하루의 인생 운빨 스토리를 만들어주는 에이전트
+input_variables:
+  - name: dayInput
+    description: 시뮬레이션할 오늘의 단서
+    is_required: true
+  - name: events
+    description: 일어날 주요 사건 수
+    is_required: true
+output_variable:
+  description: 생성된 운빨 하루 이야기
+execution_settings:
+  default:
+    temperature: 0.9

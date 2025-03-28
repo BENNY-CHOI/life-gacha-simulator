@@ -403,3 +403,6 @@ workshop/
 workshop*/
 !workshop.*/
 Database.*
+
+**/secrets.json
+**/.microsoft/usersecrets/
